@@ -152,6 +152,10 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
             o0 = o0.numpy()
             o1 = o1.numpy()
             o2 = o2.numpy()
+            # print(0,o0)
+            # print(1,o1)
+            # print(2,o2)
+            # print(3,o3)
             
             # Bounding the action space
             if environment == 'CarRacing-v0':
@@ -170,6 +174,7 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
 
             
             # Environment simulation step
+            # print(action)
             observation, reward, done, info = env.step(action)  
             if environment == 'AntBulletEnv-v0': reward = env.unwrapped.rewards[1] # Distance walked
             rew_ep += reward
@@ -218,6 +223,17 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
                 weights1_2, weights2_3, weights3_4 = hebbian_update_ABCD_lr_D_out(hebb_coeffs, weights1_2, weights2_3, weights3_4, o0, o1, o2, o3)
             elif hebb_rule == 'ABCD_lr_D_in_and_out':
                 weights1_2, weights2_3, weights3_4 = hebbian_update_ABCD_lr_D_in_and_out(hebb_coeffs, weights1_2, weights2_3, weights3_4, o0, o1, o2, o3)
+            elif hebb_rule == 'NB':
+                weights1_2, weights2_3, weights3_4 = hebbian_update_NB(hebb_coeffs, weights1_2, weights2_3, weights3_4, o0, o1, o2, o3)
+                # for v in weights1_2:
+                #     print("w",v)
+                #
+                # for v in weights2_3:
+                #     print("w",v)
+                #
+                #
+                # for v in weights3_4:
+                #     print("w",v)
             else:
                 raise ValueError('The provided Hebbian rule is not valid')
                 
