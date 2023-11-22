@@ -29,22 +29,22 @@ def main(argv):
     parser.add_argument('--distribution', type=str, default='normal', metavar='', help='Sampling distribution for initialize the Hebbian coefficients: normal, uniform')
 
     args = parser.parse_args()
+    for i in range(3):
+        if not exists(args.folder):
+            mkdir(args.folder)
 
-    if not exists(args.folder):
-        mkdir(args.folder)
-        
-    # Initialise the EvolutionStrategy class
-    print('\n\n........................................................................')
-    print('\nInitilisating Hebbian ES for ' + args.environment + ' with ' + args.hebb_rule + ' Hebbian rule\n')
-    es = EvolutionStrategyHebb(args.hebb_rule, args.environment, args.init_weights, population_size=args.popsize, sigma=args.sigma, learning_rate=args.lr, decay=args.decay, num_threads=args.threads, distribution=args.distribution)
-    
-    # Start the evolution
-    print('\n........................................................................')
-    print('\n ♪┏(°.°)┛┗(°.°)┓ Starting Evolution ┗(°.°)┛┏(°.°)┓ ♪ \n')
-    tic = time.time()
-    es.run(args.generations, print_step=args.print_every, path=args.folder)
-    toc = time.time()
-    print('\nEvolution took: ', int(toc-tic), ' seconds\n')
+        # Initialise the EvolutionStrategy class
+        print('\n\n...........................RUN '+str(i)+'.............................................')
+        print('\nInitilisating Hebbian ES for ' + args.environment + ' with ' + args.hebb_rule + ' Hebbian rule\n')
+        es = EvolutionStrategyHebb(args.hebb_rule, args.environment, args.init_weights, population_size=args.popsize, sigma=args.sigma, learning_rate=args.lr, decay=args.decay, num_threads=args.threads, distribution=args.distribution)
+
+        # Start the evolution
+        print('\n........................................................................')
+        print('\n ♪┏(°.°)┛┗(°.°)┓ Starting Evolution ┗(°.°)┛┏(°.°)┓ ♪ \n')
+        tic = time.time()
+        es.run(args.generations, print_step=args.print_every, path=args.folder)
+        toc = time.time()
+        print('\nEvolution took: ', int(toc-tic), ' seconds\n')
     
     
 if __name__ == '__main__':

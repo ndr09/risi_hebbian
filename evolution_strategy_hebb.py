@@ -324,9 +324,12 @@ class EvolutionStrategyHebb(object):
         id_ = str(int(time.time()))
         if not exists(path + '/' + id_):
             mkdir(path + '/' + id_)
-            
-        print('Run: ' + id_ + '\n\n........................................................................\n')
-            
+
+        t = 'Run: ' + id_ + '\n\n........................................................................\n'
+        print(t)
+
+        with open(path + "/"+ id_ + '/log.txt', "a") as f:
+            f.write(t)
         pool = mp.Pool(self.num_threads) if self.num_threads > 1 else None
         
         generations_rewards = []
@@ -350,9 +353,12 @@ class EvolutionStrategyHebb(object):
                 
             # Print fitness and save Hebbian coefficients and/or Coevolved / CNNs parameters
             if (iteration + 1) % print_step == 0:
+                t = 'iter %4i | reward: %3i |  update_factor: %f  lr: %f | sum_coeffs: %i sum_abs_coeffs: %4i' % (iteration + 1, rew_ , self.update_factor, self.learning_rate, int(np.sum(self.coeffs)), int(np.sum(abs(self.coeffs))))
                 rew_ = rewards.mean()
-                print('iter %4i | reward: %3i |  update_factor: %f  lr: %f | sum_coeffs: %i sum_abs_coeffs: %4i' % (iteration + 1, rew_ , self.update_factor, self.learning_rate, int(np.sum(self.coeffs)), int(np.sum(abs(self.coeffs)))), flush=True)
-                
+                print(t, flush=True)
+                with open(path + "/" + id_ + '/log.txt', "a") as f:
+                    f.write(t)
+
                 if rew_ > 100:
                     torch.save(self.get_coeffs(),  path + "/"+ id_ + '/HEBcoeffs__' + self.environment + "__rew_" + str(int(rew_)) + '__' + self.hebb_rule + "__init_" + str(self.init_weights) + "__pop_" + str(self.POPULATION_SIZE) + '__coeffs' + "__{}.dat".format(iteration))
                     if self.coevolve_init:
