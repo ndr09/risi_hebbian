@@ -1,9 +1,5 @@
 import numpy as np
 import multiprocessing as mp
-
-from pebble import ProcessPool
-from concurrent.futures import TimeoutError
-
 import torch
 import time
 from os.path import exists
@@ -239,13 +235,8 @@ class EvolutionStrategyHebb(object):
 
                 worker_args.append( (self.get_reward, self.hebb_rule, self.environment,  self.init_weights,  heb_coeffs_try) )
 
-            future = pool.schedule(worker_process_hebb, worker_args, timeout=300)
-            result = None
-            while result is None:
-                try:
-                    result = future.result()
-                except TimeoutError:
-                    print("Future: %s took more than 300 seconds to complete, redoing" % future)
+            rewards  = pool.map(worker_process_hebb, worker_args)
+
         else:
             rewards = []
             for p in population:
@@ -276,15 +267,7 @@ class EvolutionStrategyHebb(object):
             
                 worker_args.append( (self.get_reward, self.hebb_rule,  self.environment,  self.init_weights, heb_coeffs_try, coevolved_parameters_try) )
 
-
-            future  = pool.schedule(worker_process_hebb_coevo, worker_args, timeout=300)
-            result = None
-            while result is None:
-                try:
-                    result = future.result()
-                except TimeoutError:
-                    print("Future: %s took more than 300 seconds to complete, redoing" % future)
-
+            rewards  = pool.map(worker_process_hebb_coevo, worker_args)
 
         else:
             rewards = []
@@ -347,9 +330,12 @@ class EvolutionStrategyHebb(object):
 
         with open(path + "/"+ id_ + '/log.txt', "a") as f:
             f.write(t)
+        try:
+            mp.set_start_method("spawn")
+        except RuntimeError:
+            pass
 
-
-        pool = ProcessPool(self.num_threads)  if self.num_threads > 1 else None
+        pool = mp.Pool(self.num_threads) if self.num_threads > 1 else None
         
         generations_rewards = []
 
