@@ -35,6 +35,7 @@ def worker_process_hebb(arg):
     
     wp = np.array(coeffs)
     decay = - 0.01 * np.mean(wp**2)
+
     r = get_reward_func( hebb_rule,  eng,  init_weights, coeffs) + decay
     
     return r 
@@ -45,6 +46,7 @@ def worker_process_hebb_coevo(arg):
     
     wp = np.array(coeffs)
     decay = - 0.01 * np.mean(wp**2)
+
     r = get_reward_func( hebb_rule,  eng,  init_weights, coeffs, coevolved_parameters) + decay
 
     return r 
@@ -130,7 +132,7 @@ class EvolutionStrategyHebb(object):
                     self.initial_weights_co = np.random.uniform(-1,1, (cnn_weights + plastic_weights ,1))  
                     
                 elif self.distribution == 'normal':    
-                    self.coeffs = torch.randn(nbc, self.coefficients_per_synapse).detach().numpy().squeeze()
+                    self.coeffs = torch.randn(nbc* self.coefficients_per_synapse-(648+action_dim)).detach().numpy().squeeze()
                     self.initial_weights_co = torch.randn(cnn_weights + plastic_weights , 1).detach().numpy().squeeze()                     
             
             # Random initial weights
@@ -140,7 +142,7 @@ class EvolutionStrategyHebb(object):
                     self.initial_weights_co = np.random.uniform(-1,1,(cnn_weights,1))      
            
                 elif self.distribution == 'normal':    
-                    self.coeffs = torch.randn(nbc, self.coefficients_per_synapse).detach().numpy().squeeze()
+                    self.coeffs = torch.randn(nbc* self.coefficients_per_synapse-(648+action_dim)).detach().numpy().squeeze()
                     self.initial_weights_co = torch.randn(cnn_weights, 1).detach().numpy().squeeze()    
                 
         # State-vector environments (MLP)            
@@ -154,7 +156,7 @@ class EvolutionStrategyHebb(object):
                     self.initial_weights_co = np.random.uniform(-1,1, (plastic_weights ,1))       
                      
                 elif self.distribution == 'normal':
-                    self.coeffs = torch.randn(nbc, self.coefficients_per_synapse).detach().numpy().squeeze()
+                    self.coeffs = torch.randn(nbc*self.coefficients_per_synapse-(input_dim+action_dim),1 ).detach().numpy().squeeze()
                     self.initial_weights_co = torch.randn(nbc , 1).detach().numpy().squeeze()
             
             # Random initial weights
@@ -162,7 +164,7 @@ class EvolutionStrategyHebb(object):
                 if self.distribution == 'uniform': 
                     self.coeffs = np.random.uniform(-1,1,(nbc, self.coefficients_per_synapse))
                 elif self.distribution == 'normal':
-                    self.coeffs = torch.randn(nbc, self.coefficients_per_synapse).detach().numpy().squeeze()
+                    self.coeffs = torch.randn(nbc*self.coefficients_per_synapse-(input_dim+action_dim), 1).detach().numpy().squeeze()
                     
                     
                     
@@ -217,7 +219,7 @@ class EvolutionStrategyHebb(object):
 
                 population.append(x)               
                 population.append(x2)
-                
+        # print("########", len(population[-1]), len(population[-1]))
         return np.array(population).astype(np.float32)
 
 
@@ -319,12 +321,13 @@ class EvolutionStrategyHebb(object):
 
 
 
-    def run(self, iterations, print_step=10, path='heb_coeffs'):                                                    
+    def run(self, seed, iterations, print_step=10, path='heb_coeffs'):
         
         id_ = str(int(time.time()))
         if not exists(path + '/' + id_):
             mkdir(path + '/' + id_)
-
+        np.random.seed(seed)
+        torch.random.manual_seed(seed)
         t = 'Run: ' + id_ + '\n\n........................................................................\n'
         print(t)
 
@@ -359,12 +362,12 @@ class EvolutionStrategyHebb(object):
             # Print fitness and save Hebbian coefficients and/or Coevolved / CNNs parameters
             if (iteration + 1) % print_step == 0:
                 rew_ = rewards.mean()
-                t = 'iter %4i | reward: %3i |  update_factor: %f  lr: %f | sum_coeffs: %i sum_abs_coeffs: %4i' % (iteration + 1, rew_ , self.update_factor, self.learning_rate, int(np.sum(self.coeffs)), int(np.sum(abs(self.coeffs))))
+                t = 'iter %4i | reward: %3i |  update_factor: %f  lr: %f | sum_coeffs: %i sum_abs_coeffs: %4i \n' % (iteration + 1, rew_ , self.update_factor, self.learning_rate, int(np.sum(self.coeffs)), int(np.sum(abs(self.coeffs))))
 
-                print(t, flush=True)
+
                 with open(path + "/" + id_ + '/log.txt', "a") as f:
                     f.write(t)
-
+                print(t, flush=True)
                 if rew_ > 100:
                     torch.save(self.get_coeffs(),  path + "/"+ id_ + '/HEBcoeffs__' + self.environment + "__rew_" + str(int(rew_)) + '__' + self.hebb_rule + "__init_" + str(self.init_weights) + "__pop_" + str(self.POPULATION_SIZE) + '__coeffs' + "__{}.dat".format(iteration))
                     if self.coevolve_init:

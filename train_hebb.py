@@ -27,9 +27,10 @@ def main(argv):
     parser.add_argument('--threads', type=int, metavar='', default = -1, help='Number of threads used to run evolution in parallel: -1 uses all threads available')    
     parser.add_argument('--folder', type=str, default='heb_coeffs', metavar='', help='folder to store the evolved Hebbian coefficients')
     parser.add_argument('--distribution', type=str, default='normal', metavar='', help='Sampling distribution for initialize the Hebbian coefficients: normal, uniform')
-
+    parser.add_argument('--seed', type=int)
     args = parser.parse_args()
-    for i in range(3):
+
+    for i in range(1):
         if not exists(args.folder):
             mkdir(args.folder)
 
@@ -42,7 +43,7 @@ def main(argv):
         print('\n........................................................................')
         print('\n ♪┏(°.°)┛┗(°.°)┓ Starting Evolution ┗(°.°)┛┏(°.°)┓ ♪ \n')
         tic = time.time()
-        es.run(args.generations, print_step=args.print_every, path=args.folder)
+        es.run(args.seed, args.generations, print_step=args.print_every, path=args.folder)
         toc = time.time()
         print('\nEvolution took: ', int(toc-tic), ' seconds\n')
     
