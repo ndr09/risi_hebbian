@@ -47,27 +47,27 @@ def reshape_coeffs(coeffs, env):
     else:
         size = (648 + 128 + 64 + 8, 5)
         rc = np.zeros(size, dtype=np.float32)
-        for n in range(28):
+        for n in range(648):
             rc[n, 0] = coeffs[c]
             rc[n, 1] = coeffs[c + 1]
             rc[n, 3] = coeffs[c + 2]
             rc[n, 4] = coeffs[c + 3]
             c += 4
-        for n in range(28, 128 + 28):
+        for n in range(648, 128 + 648):
             rc[n, 0] = coeffs[c]
             rc[n, 1] = coeffs[c + 1]
             rc[n, 2] = coeffs[c + 2]
             rc[n, 3] = coeffs[c + 3]
             rc[n, 4] = coeffs[c + 4]
             c += 5
-        for n in range(28 + 128, 128 + 28 + 64):
+        for n in range(648 + 128, 128 + 648 + 64):
             rc[n, 0] = coeffs[c]
             rc[n, 1] = coeffs[c + 1]
             rc[n, 2] = coeffs[c + 2]
             rc[n, 3] = coeffs[c + 3]
             rc[n, 4] = coeffs[c + 4]
             c += 5
-        for n in range(28 + 128 + 64, 128 + 28 + 64 + 8):
+        for n in range(648 + 128 + 64, 128 + 648 + 64 + 8):
             rc[n, 0] = coeffs[c]
             # rc[n, 1] = coeffs[c + 1]
             rc[n, 2] = coeffs[c + 1]
@@ -289,6 +289,7 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
                 weights1_2, weights2_3, weights3_4 = hebbian_update_ABCD_lr_D_in_and_out(hebb_coeffs, weights1_2, weights2_3, weights3_4, o0, o1, o2, o3)
             elif hebb_rule == 'NB':
                 rc = reshape_coeffs(hebb_coeffs, environment)
+                print(rc[0])
                 weights1_2, weights2_3, weights3_4 = hebbian_update_NB(rc, weights1_2, weights2_3, weights3_4, o0, o1, o2, o3)
                 # for v in weights1_2:
                 #     print("w",v)
