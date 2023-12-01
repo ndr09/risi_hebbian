@@ -28,7 +28,7 @@ class CNN_heb(nn.Module):
     "CNN+MLP with n=input_channels frames as input. Non-activated last layer's output"
     def __init__(self, input_channels, action_space_dim):
         super(CNN_heb, self).__init__()
-        
+        # print("output    ", action_space_dim)
         self.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=6, kernel_size=3, stride=1, bias=False)   
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(in_channels=6, out_channels=8, kernel_size=5, stride=2, bias=False)

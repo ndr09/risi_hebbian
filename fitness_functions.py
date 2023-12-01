@@ -45,7 +45,7 @@ def reshape_coeffs(coeffs, env):
             rc[n, 4] = coeffs[c + 3]
             c += 4
     else:
-        size = (648 + 128 + 64 + 8, 5)
+        size = (648 + 128 + 64 + 3, 5)
         rc = np.zeros(size, dtype=np.float32)
         for n in range(648):
             rc[n, 0] = coeffs[c]
@@ -67,7 +67,7 @@ def reshape_coeffs(coeffs, env):
             rc[n, 3] = coeffs[c + 3]
             rc[n, 4] = coeffs[c + 4]
             c += 5
-        for n in range(648 + 128 + 64, 128 + 648 + 64 + 8):
+        for n in range(648 + 128 + 64, 128 + 648 + 64 + 3):
             rc[n, 0] = coeffs[c]
             # rc[n, 1] = coeffs[c + 1]
             rc[n, 2] = coeffs[c + 1]
