@@ -15,6 +15,70 @@ from wrappers import ScaledFloatFrame
 
 gym.logger.set_level(40)
 
+def reshape_coeffs(coeffs, env):
+    rc  =None
+    c = 0
+    if env == 'AntBulletEnv-v0':
+        size = (28+128+64+8, 5)
+        rc = np.zeros(size, dtype=np.float32)
+        for n in range(28):
+            rc[n, 0] = coeffs[c]
+            rc[n, 1] = coeffs[c+1]
+            rc[n, 3] = coeffs[c+2]
+            rc[n, 4] = coeffs[c+3]
+            c += 4
+        for n in range(28, 128+28):
+            rc[n, 0] = coeffs[c]
+            rc[n, 1] = coeffs[c + 1]
+            rc[n, 2] = coeffs[c + 2]
+            rc[n, 3] = coeffs[c + 3]
+            rc[n, 4] = coeffs[c + 4]
+            c += 5
+        for n in range(28+128, 128+28+64):
+            rc[n, 0] = coeffs[c]
+            rc[n, 1] = coeffs[c + 1]
+            rc[n, 2] = coeffs[c + 2]
+            rc[n, 3] = coeffs[c + 3]
+            rc[n, 4] = coeffs[c + 4]
+            c += 5
+        for n in range(28+128+64, 128+28+64+8):
+            rc[n, 0] = coeffs[c]
+            rc[n, 2] = coeffs[c + 1]
+            rc[n, 3] = coeffs[c + 2]
+            rc[n, 4] = coeffs[c + 3]
+            c += 4
+    else:
+        size = (648 + 128 + 64 + 3, 5)
+        rc = np.zeros(size, dtype=np.float32)
+        for n in range(648):
+            rc[n, 0] = coeffs[c]
+            rc[n, 1] = coeffs[c + 1]
+            rc[n, 3] = coeffs[c + 2]
+            rc[n, 4] = coeffs[c + 3]
+            c += 4
+        for n in range(648, 128 + 648):
+            rc[n, 0] = coeffs[c]
+            rc[n, 1] = coeffs[c + 1]
+            rc[n, 2] = coeffs[c + 2]
+            rc[n, 3] = coeffs[c + 3]
+            rc[n, 4] = coeffs[c + 4]
+            c += 5
+        for n in range(648 + 128, 128 + 648 + 64):
+            rc[n, 0] = coeffs[c]
+            rc[n, 1] = coeffs[c + 1]
+            rc[n, 2] = coeffs[c + 2]
+            rc[n, 3] = coeffs[c + 3]
+            rc[n, 4] = coeffs[c + 4]
+            c += 5
+        for n in range(648 + 128 + 64, 128 + 648 + 64 + 3):
+            rc[n, 0] = coeffs[c]
+            # rc[n, 1] = coeffs[c + 1]
+            rc[n, 2] = coeffs[c + 1]
+            rc[n, 3] = coeffs[c + 2]
+            rc[n, 4] = coeffs[c + 3]
+            c += 4
+    return rc
+
 
 def evaluate_hebb(hebb_rule: str, environment: str, init_weights='uni', render=True,
                   *evolved_parameters: [np.array]) -> None:
@@ -58,10 +122,10 @@ def evaluate_hebb(hebb_rule: str, environment: str, init_weights='uni', render=T
             env = gym.make(environment, verbose=0)
         except:
             env = gym.make(environment)
-
+        env.seed(0)
         if environment[-12:-6] == 'Bullet' and render:
             env.render()  # bullet envs            
-
+        env.seed(0)
         # Check if selected env is pixel or state-vector 
         if len(env.observation_space.shape) == 3:  # Pixel-based environment
             pixel_env = True
@@ -121,13 +185,13 @@ def evaluate_hebb(hebb_rule: str, environment: str, init_weights='uni', render=T
                 __ = env.step(action)
 
                 # normalised_weights = True
-        normalised_weights = False if environment[-12:-6] == 'Bullet' else True
+        normalised_weights = False #if environment[-12:-6] == 'Bullet' else True
 
         neg_count = 0
         rew_ep = 0
         t = 0
         while True:
-
+            print("############ ",t)
             o0, o1, o2, o3 = p([observation])
             o0 = o0.numpy()
             o1 = o1.numpy()
@@ -137,6 +201,7 @@ def evaluate_hebb(hebb_rule: str, environment: str, init_weights='uni', render=T
             if environment == 'CarRacing-v0':
                 action = np.array([torch.tanh(o3[0]), torch.sigmoid(o3[1]), torch.sigmoid(o3[2])])
                 o3 = o3.numpy()
+                print(o3)
             elif environment[-12:-6] == 'Bullet':
                 o3 = torch.tanh(o3).numpy()
                 action = o3
@@ -205,11 +270,24 @@ def evaluate_hebb(hebb_rule: str, environment: str, init_weights='uni', render=T
                                                                                          weights2_3, weights3_4, o0, o1,
                                                                                          o2, o3)
             elif hebb_rule == "NB":
-                weights1_2, weights2_3, weights3_4 = hebbian_update_NB(hebb_coeffs, weights1_2, weights2_3, weights3_4,
-                                                                       o0, o1, o2, o3)
+                rc = reshape_coeffs(hebb_coeffs, environment)
+                #rc = hebb_coeffs
+                # print(weights3_4)
+                weights1_2, weights2_3, weights3_4 = hebbian_update_NB(rc, weights1_2, weights2_3, weights3_4, o0, o1,
+                                                                       o2, o3)
+
+                # print("----------------------")
+                # print(weights3_4)
+                # print("=====================")
             else:
                 raise ValueError('The provided Hebbian rule is not valid')
 
+
+            (a, b, c) = (0, 1, 2) if not pixel_env else (2, 3, 4)
+            w1 = list(p.parameters())[a].__abs__().max()
+            w2 = list(p.parameters())[b].__abs__().max()
+            w3 = list(p.parameters())[c].__abs__().argmax()
+            print(w1,w2,w3)
             # Normalise weights per layer
             if normalised_weights == True:
                 (a, b, c) = (0, 1, 2) if not pixel_env else (2, 3, 4)
@@ -238,17 +316,19 @@ def main(argv):
 
     args = parser.parse_args()
     rews = []
-    for f in ["190.dat", "943.dat", "1339.dat"]:
-        hebb_coeffs = torch.load(args.path_hebb)
-        coevolved_or_cnn_parameters = torch.load(args.path_coev) if args.path_coev is not None else None
-        init_weights = 'uni'
-        render = False
+    hebb_coeffs = torch.load(args.path_hebb)
+    coevolved_or_cnn_parameters = torch.load(args.path_coev) if args.path_coev is not None else None
+    init_weights = 'uni'
+    render = True
 
-        # Run the environment
+    # Run the environment
 
-        for i in range(100):
-            rews.append(evaluate_hebb(args.hebb_rule, args.environment, args.init_weights, render, hebb_coeffs, coevolved_or_cnn_parameters))
+    for i in range(1):
+        print(len(hebb_coeffs))
+        print(len(coevolved_or_cnn_parameters))
+        rews.append(evaluate_hebb(args.hebb_rule, args.environment, args.init_weights, render, hebb_coeffs, coevolved_or_cnn_parameters))
     print(np.mean(rews), np.std(rews))
+    print(rews)
 
 if __name__ == '__main__':
     main(sys.argv)

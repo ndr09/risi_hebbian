@@ -85,8 +85,9 @@ class EvolutionStrategyHebb(object):
             self.coefficients_per_synapse = 5
         elif hebb_rule == 'ABCD_lr_D_in_and_out':                                             
             self.coefficients_per_synapse = 6
-        elif hebb_rule == "NB":
+        elif hebb_rule == "NB" or hebb_rule=="NU":
             self.coefficients_per_synapse = 5
+
         else:
             raise ValueError('The provided Hebbian rule is not valid')
             
@@ -138,16 +139,18 @@ class EvolutionStrategyHebb(object):
             # Random initial weights
             else:
                 if self.distribution == 'uniform':                                                                        
-                    self.coeffs = np.random.uniform(-1,1,(nbc, self.coefficients_per_synapse))
+                    self.coeffs = np.random.uniform(-1,1,(nbc* self.coefficients_per_synapse-(648+action_dim)))
                     self.initial_weights_co = np.random.uniform(-1,1,(cnn_weights,1))      
            
                 elif self.distribution == 'normal':    
                     self.coeffs = torch.randn(nbc* self.coefficients_per_synapse-(648+action_dim)).detach().numpy().squeeze()
                     self.initial_weights_co = torch.randn(cnn_weights, 1).detach().numpy().squeeze()    
-                
+                else:
+                    self.coeffs = torch.randn(nbc* self.coefficients_per_synapse-(648+action_dim)).detach().numpy().squeeze()
+                    self.initial_weights_co = None
         # State-vector environments (MLP)            
         else:
-            plastic_weights = (128*input_dim) + (64*128) + (action_dim*64)                                            #  Hebbian coefficients:  MLP x coefficients_per_synapse :plastic_weights x coefficients_per_synapse
+            plastic_weights = (128*input_dim) + (128*64) + (action_dim*64)                                            #  Hebbian coefficients:  MLP x coefficients_per_synapse :plastic_weights x coefficients_per_synapse
             nbc =  input_dim+ 128+64+action_dim
             # Co-evolution of initial weights
             if self.coevolve_init:
@@ -156,7 +159,7 @@ class EvolutionStrategyHebb(object):
                     self.initial_weights_co = np.random.uniform(-1,1, (plastic_weights ,1))       
                      
                 elif self.distribution == 'normal':
-                    self.coeffs = torch.randn(nbc*self.coefficients_per_synapse-(input_dim+action_dim),1 ).detach().numpy().squeeze()
+                    self.coeffs = torch.randn(nbc,self.coefficients_per_synapse ).detach().numpy().squeeze()
                     self.initial_weights_co = torch.randn(nbc , 1).detach().numpy().squeeze()
             
             # Random initial weights
@@ -164,7 +167,7 @@ class EvolutionStrategyHebb(object):
                 if self.distribution == 'uniform': 
                     self.coeffs = np.random.uniform(-1,1,(nbc, self.coefficients_per_synapse))
                 elif self.distribution == 'normal':
-                    self.coeffs = torch.randn(nbc*self.coefficients_per_synapse-(input_dim+action_dim), 1).detach().numpy().squeeze()
+                    self.coeffs = torch.randn(nbc, self.coefficients_per_synapse).detach().numpy().squeeze()
                     
                     
                     

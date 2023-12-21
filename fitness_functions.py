@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from typing import List, Any
 
-from policies import MLP_heb, CNN_heb
+from policies import MLP_heb, CNN_heb, WLNHNN
 from hebbian_weights_update import *
 from wrappers import FireEpisodicLifeEnv, ScaledFloatFrame
 
@@ -15,7 +15,7 @@ def reshape_coeffs(coeffs, env):
     rc  =None
     c = 0
     if env == 'AntBulletEnv-v0':
-        size = (28+128+64+8, 5)
+        size = (28+32+64+8, 5)
         rc = np.zeros(size, dtype=np.float32)
         for n in range(28):
             rc[n, 0] = coeffs[c]
@@ -23,23 +23,22 @@ def reshape_coeffs(coeffs, env):
             rc[n, 3] = coeffs[c+2]
             rc[n, 4] = coeffs[c+3]
             c += 4
-        for n in range(28, 128+28):
+        for n in range(28, 64+28):
             rc[n, 0] = coeffs[c]
             rc[n, 1] = coeffs[c + 1]
             rc[n, 2] = coeffs[c + 2]
             rc[n, 3] = coeffs[c + 3]
             rc[n, 4] = coeffs[c + 4]
             c += 5
-        for n in range(28+128, 128+28+64):
+        for n in range(28+128, 64+28+32):
             rc[n, 0] = coeffs[c]
             rc[n, 1] = coeffs[c + 1]
             rc[n, 2] = coeffs[c + 2]
             rc[n, 3] = coeffs[c + 3]
             rc[n, 4] = coeffs[c + 4]
             c += 5
-        for n in range(28+128+64, 128+28+64+8):
+        for n in range(28+32+64, 32+28+64+8):
             rc[n, 0] = coeffs[c]
-            # rc[n, 1] = coeffs[c + 1]
             rc[n, 2] = coeffs[c + 1]
             rc[n, 3] = coeffs[c + 2]
             rc[n, 4] = coeffs[c + 3]
@@ -159,7 +158,8 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
         if pixel_env == True: 
             p = CNN_heb(input_channels, action_dim)      
         else:
-            p = MLP_heb(input_dim, action_dim)          
+            p = WLNHNN([input_dim, 128,64, action_dim]) #MLP_heb(input_dim, action_dim)
+            p.set_hrules(hebb_coeffs.flatten())
         
         
         # Initialise weights of the policy network with an specific distribution or with the co-evolved weights
@@ -175,7 +175,7 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
                 cnn_weights2 = initial_weights_co[162:]
                 list(p.parameters())[0].data = torch.tensor(cnn_weights1.reshape((6,3,3,3))).float()
                 list(p.parameters())[1].data = torch.tensor(cnn_weights2.reshape((8,6,5,5))).float()
-        p = p.float()
+        # p = p.float()
         
         # Unpack network's weights
         if pixel_env:
@@ -185,9 +185,9 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
             
         
         # Convert weights to numpy so we can JIT them with Numba
-        weights1_2 = weights1_2.detach().numpy()
-        weights2_3 = weights2_3.detach().numpy()
-        weights3_4 = weights3_4.detach().numpy()
+        # weights1_2 = weights1_2.detach().numpy()
+        # weights2_3 = weights2_3.detach().numpy()
+        # weights3_4 = weights3_4.detach().numpy()
         
         observation = env.reset() 
         if pixel_env: observation = np.swapaxes(observation,0,2) #(3, 84, 84)       
@@ -213,6 +213,7 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
                 observation = (observation == torch.arange(env.observation_space.n)).float()
             
             o0, o1, o2, o3 = p([observation])
+
             o0 = o0.numpy()
             o1 = o1.numpy()
             o2 = o2.numpy()
@@ -223,8 +224,8 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
             
             # Bounding the action space
             if environment == 'CarRacing-v0':
-                action = np.array([ torch.tanh(o3[0]), torch.sigmoid(o3[1]), torch.sigmoid(o3[2]) ]) 
-                o3 = o3.numpy()
+                action = np.array([ torch.tanh(o3[0]), torch.sigmoid(o3[1]), torch.sigmoid(o3[2]) ])
+                o3 = action
             elif environment[-12:-6] == 'Bullet':
                 o3 = torch.tanh(o3).numpy()
                 action = o3
@@ -288,18 +289,10 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
             elif hebb_rule == 'ABCD_lr_D_in_and_out':
                 weights1_2, weights2_3, weights3_4 = hebbian_update_ABCD_lr_D_in_and_out(hebb_coeffs, weights1_2, weights2_3, weights3_4, o0, o1, o2, o3)
             elif hebb_rule == 'NB':
-                rc = reshape_coeffs(hebb_coeffs, environment)
-                print(rc[0])
-                weights1_2, weights2_3, weights3_4 = hebbian_update_NB(rc, weights1_2, weights2_3, weights3_4, o0, o1, o2, o3)
-                # for v in weights1_2:
-                #     print("w",v)
-                #
-                # for v in weights2_3:
-                #     print("w",v)
-                #
-                #
-                # for v in weights3_4:
-                #     print("w",v)
+                #rc = reshape_coeffs(hebb_coeffs, environment)
+                weights1_2, weights2_3, weights3_4 = hebbian_update_NB(hebb_coeffs, weights1_2, weights2_3, weights3_4, o0, o1, o2, o3)
+            elif hebb_rule=='NU':
+                pass
             else:
                 raise ValueError('The provided Hebbian rule is not valid')
                 
@@ -313,7 +306,7 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
         
             
         env.close()
-
+    print(rew_ep)
     return rew_ep
     # return max(rew_ep, 0)
 
