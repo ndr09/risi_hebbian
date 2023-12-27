@@ -10,6 +10,7 @@ from typing import List, Any
 from policies import MLP_heb, CNN_heb, WLNHNN
 from hebbian_weights_update import *
 from wrappers import FireEpisodicLifeEnv, ScaledFloatFrame
+from numba.typed import List
 
 def reshape_coeffs(coeffs, env):
     rc  =None
@@ -75,7 +76,7 @@ def reshape_coeffs(coeffs, env):
             c += 4
     return rc
 
-def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evolved_parameters: List[np.array]) -> float:
+def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evolved_parameters) -> float:
     """
     Evaluate an agent 'evolved_parameters' controlled by a Hebbian network in an environment 'environment' during a lifetime.
     The initial weights are either co-evolved (if 'init_weights' == 'coevolve') along with the Hebbian coefficients or randomly sampled at each episode from the 'init_weights' distribution. 
@@ -158,7 +159,10 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
         if pixel_env == True: 
             p = CNN_heb(input_channels, action_dim)      
         else:
-            p = WLNHNN([input_dim, 128,64, action_dim]) #MLP_heb(input_dim, action_dim)
+            nl = List()
+            for i in [input_dim, 128,64, action_dim]:
+                nl.append(i)
+            p = WLNHNN(nl) #MLP_heb(input_dim, action_dim)
             p.set_hrules(hebb_coeffs.flatten())
         
         
@@ -167,7 +171,7 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
             nn.utils.vector_to_parameters( torch.tensor (initial_weights_co, dtype=torch.float32 ),  p.parameters() )
         else:       
             # Randomly sample initial weights from chosen distribution
-            p.apply(weights_init)
+            #p.apply(weights_init)
             
              # Load CNN paramters
             if pixel_env:
@@ -178,10 +182,10 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
         # p = p.float()
         
         # Unpack network's weights
-        if pixel_env:
-            weightsCNN1, weightsCNN2, weights1_2, weights2_3, weights3_4 = list(p.parameters())
-        else:
-            weights1_2, weights2_3, weights3_4 = list(p.parameters())
+        # if pixel_env:
+        #     weightsCNN1, weightsCNN2, weights1_2, weights2_3, weights3_4 = list(p.parameters())
+        # else:
+        #     weights1_2, weights2_3, weights3_4 = list(p.parameters())
             
         
         # Convert weights to numpy so we can JIT them with Numba
@@ -211,12 +215,15 @@ def fitness_hebb(hebb_rule : str, environment : str, init_weights = 'uni' , *evo
             # For obaservation ∈ gym.spaces.Discrete, we one-hot encode the observation
             if isinstance(env.observation_space, Discrete): 
                 observation = (observation == torch.arange(env.observation_space.n)).float()
-            
-            o0, o1, o2, o3 = p([observation])
-
-            o0 = o0.numpy()
-            o1 = o1.numpy()
-            o2 = o2.numpy()
+            nl = List()
+            for o in observation:
+                nl.append(o)
+            o3 = p.call(observation)
+            o3 = torch.tensor(o3)
+            # print(o3)
+            o0 = []#o0.numpy()
+            o1 = []#o1.numpy()
+            o2 = []#o2.numpy()
             # print(0,o0)
             # print(1,o1)
             # print(2,o2)

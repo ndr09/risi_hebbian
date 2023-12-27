@@ -6,8 +6,9 @@ from os.path import exists
 from os import mkdir
 from gym.spaces import Discrete, Box
 import gym
+from policies import WLNHNN
 import pybullet_envs 
-
+from numba.typed import List
 from fitness_functions import fitness_hebb
 
 
@@ -325,7 +326,11 @@ class EvolutionStrategyHebb(object):
 
 
     def run(self, seed, iterations, print_step=10, path='heb_coeffs'):
-        
+        nodes = List()
+        nodes.append(1)
+        nodes.append(1)
+        nodes.append(1)
+        _ = WLNHNN(nodes)
         id_ = str(int(time.time()))
         if not exists(path + '/' + id_):
             mkdir(path + '/' + id_)
